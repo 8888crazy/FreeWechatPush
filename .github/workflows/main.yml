@@ -7,7 +7,11 @@ on:
     
   # 可选：允许手动触发
   workflow_dispatch:
-
+env:
+  APP_ID: ${{ secrets.WX_APP_ID }}
+  APP_SECRET: ${{ secrets.WX_APP_SECRET }}
+  OPEN_IDS: ${{ secrets.WX_OPEN_IDS }}  # 使用逗号分隔的列表
+  
 jobs:
   run-python-script:
     runs-on: ubuntu-latest

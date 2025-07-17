@@ -4,21 +4,30 @@ import time
 import requests
 import json
 import schedule
+import os
 from bs4 import BeautifulSoup
 
 
 # 从测试号信息获取
-appID = "wx1b3c649164eebf82"
-appSecret = "d9e140e1a67b3e147462cf29438af1b4"
+# 从环境变量获取
+appID = os.getenv("APP_ID", "wx1b3c649164eebf82")
+appSecret = os.getenv("APP_SECRET", "d9e140e1a67b3e147462cf29438af1b4")
+
+# 从环境变量获取逗号分隔的OpenID列表
+openIds_str = os.getenv("OPEN_IDS", "ofOugvo0l0L1wUwdNpKwNmxrB5NQ,ofOugvptBC1pSiOLgp8f5GjpfQJs")
+openIds = [oid.strip() for oid in openIds_str.split(",")]
+
+# appID = "wx1b3c649164eebf82"
+# appSecret = "d9e140e1a67b3e147462cf29438af1b4"
 #收信人ID即 用户列表中的微信号，见上文
 # openId = "ofOugvo0l0L1wUwdNpKwNmxrB5NQ"
 # 收信人ID列表（多个用户）
-openIds = [
-    "ofOugvo0l0L1wUwdNpKwNmxrB5NQ",  # 用户1
-    "ofOugvptBC1pSiOLgp8f5GjpfQJs",                # 用户2
-    "USER_OPEN_ID_3",                # 用户3
+# openIds = [
+#    "ofOugvo0l0L1wUwdNpKwNmxrB5NQ",  # 用户1
+#    "ofOugvptBC1pSiOLgp8f5GjpfQJs",                # 用户2
+#    "USER_OPEN_ID_3",                # 用户3
     # 添加更多用户...
-]
+#]
 
 # 天气预报模板ID
 weather_template_id = "OqxHyfroYI9lryCQwR-MHukMcy9r7qhKScmw2NPfzyI"
