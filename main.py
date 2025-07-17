@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 # 从环境变量获取
 appID = os.getenv("APP_ID")
 appSecret = os.getenv("APP_SECRET")
-city = os.getenv("CITY", "沈阳")  # 添加城市环境变量
+city = os.getenv("CITY")  # 添加城市环境变量
 
 # 从环境变量获取逗号分隔的OpenID列表
 openIds_str = os.getenv("OPEN_IDS")
