@@ -1,11 +1,7 @@
 # 免费微信推送
 原理：申请免费的测试版公众号，可获得免费的模板推送功能。
 
-### 视频教程
 
-https://www.bilibili.com/video/BV1Ng4y1r7EP/
-
-作者 **技术爬爬虾** 全网同名，转载请注明作者
 
 ### 申请公众号测试账户
 
@@ -34,22 +30,19 @@ https://mp.weixin.qq.com/debug/cgi-bin/sandbox?t=sandbox/login
 对你说的话：{{today_note.DATA}}
 ```
 
-模板二 课程提醒：
-```copy
-消息：{{message.DATA}}	
-```
+
 
 ### 配置代码
 
 将上面获得的几个值填入代码这几行
-![image](https://github.com/tech-shrimp/FreeWechatPush/assets/154193368/fe5a78ad-b4eb-45f8-a271-eda55f33a617)
-### 配置定时任务
+在 setting中设置几个环境变量
 
-修改这几行
-![image](https://github.com/tech-shrimp/FreeWechatPush/assets/154193368/58b7c58c-ac22-4a1a-b3e8-2eacc01b7329)
+![image-20250717134234284](D:/20-Software%20Cache/Makedown/image-20250717134234284.png)
 
-### 安装python依赖，启动项目
-```copy
-pip3 install -r requirements.txt
-python main.py
-```
+
+
+地区在Actions 中设置
+
+
+
+特别感谢  **技术爬爬虾**  提供的基础代码及思路，本项目基于作者改编而来！
