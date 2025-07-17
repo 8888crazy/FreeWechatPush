@@ -36,8 +36,9 @@ https://mp.weixin.qq.com/debug/cgi-bin/sandbox?t=sandbox/login
 
 将上面获得的几个值填入代码这几行
 在 setting中设置几个环境变量
+<img width="1071" height="345" alt="image" src="https://github.com/user-attachments/assets/55642906-3181-49fc-8b8e-f26f80475c16" />
 
-![image-20250717134234284](D:/20-Software%20Cache/Makedown/image-20250717134234284.png)
+
 
 
 
