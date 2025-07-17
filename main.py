@@ -3,7 +3,10 @@ import requests
 import json
 import schedule
 import os
+import random
 from bs4 import BeautifulSoup
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # 从环境变量获取
 appID = os.getenv("APP_ID")
@@ -22,62 +25,120 @@ timetable_template_id = "YOUR_TIMETABLE_TEMPLATE_ID"
 # 频率控制
 MAX_USERS_PER_MINUTE = 20  # 微信API限制
 
+# 创建具有重试机制的会话
+def create_session():
+    session = requests.Session()
+    retry_strategy = Retry(
+        total=3,  # 最大重试次数
+        backoff_factor=1,  # 指数退避因子
+        status_forcelist=[429, 500, 502, 503, 504],  # 需要重试的状态码
+        allowed_methods=["GET", "POST"]  # 允许重试的HTTP方法
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    
+    # 设置用户代理头
+    user_agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.1 Safari/605.1.15",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36"
+    ]
+    
+    session.headers.update({
+        "User-Agent": random.choice(user_agents),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1"
+    })
+    
+    return session
+
 def get_weather(my_city):
     try:
-        urls = ["http://www.weather.com.cn/textFC/hb.shtml",
-                "http://www.weather.com.cn/textFC/db.shtml",
-                "http://www.weather.com.cn/textFC/hd.shtml",
-                "http://www.weather.com.cn/textFC/hz.shtml",
-                "http://www.weather.com.cn/textFC/hn.shtml",
-                "http://www.weather.com.cn/textFC/xb.shtml",
-                "http://www.weather.com.cn/textFC/xn.shtml"
-                ]
+        urls = [
+            "http://www.weather.com.cn/textFC/hb.shtml",
+            "http://www.weather.com.cn/textFC/db.shtml",
+            "http://www.weather.com.cn/textFC/hd.shtml",
+            "http://www.weather.com.cn/textFC/hz.shtml",
+            "http://www.weather.com.cn/textFC/hn.shtml",
+            "http://www.weather.com.cn/textFC/xb.shtml",
+            "http://www.weather.com.cn/textFC/xn.shtml"
+        ]
+        
+        session = create_session()
         
         for url in urls:
-            resp = requests.get(url, timeout=10)
-            resp.raise_for_status()  # 检查HTTP错误
-            text = resp.content.decode("utf-8")
-            soup = BeautifulSoup(text, 'html5lib')
-            div_conMidtab = soup.find("div", class_="conMidtab")
-            
-            if not div_conMidtab:
-                continue
+            try:
+                print(f"尝试从 {url} 获取天气...")
+                resp = session.get(url, timeout=15)
+                resp.raise_for_status()  # 检查HTTP错误
                 
-            tables = div_conMidtab.find_all("table")
-            for table in tables:
-                trs = table.find_all("tr")[2:]
-                for index, tr in enumerate(trs):
-                    tds = tr.find_all("td")
-                    if len(tds) < 8:  # 确保有足够的列
-                        continue
-                        
-                    city_td = tds[-8]
-                    this_city = list(city_td.stripped_strings)[0]
+                # 检查响应内容类型
+                content_type = resp.headers.get('Content-Type', '').lower()
+                if 'charset=' not in content_type:
+                    resp.encoding = 'utf-8'  # 默认使用utf-8编码
                     
-                    if this_city == my_city:
-                        # 解析天气数据
-                        high_temp_td = tds[-5]
-                        low_temp_td = tds[-2]
-                        weather_type_day_td = tds[-7]
-                        weather_type_night_td = tds[-4]
-                        wind_td_day = tds[-6]
-                        wind_td_day_night = tds[-3]
-
-                        high_temp = list(high_temp_td.stripped_strings)[0] if high_temp_td.stripped_strings else "-"
-                        low_temp = list(low_temp_td.stripped_strings)[0] if low_temp_td.stripped_strings else "-"
-                        weather_typ_day = list(weather_type_day_td.stripped_strings)[0] if weather_type_day_td.stripped_strings else "-"
-                        weather_type_night = list(weather_type_night_td.stripped_strings)[0] if weather_type_night_td.stripped_strings else "-"
-
-                        wind_day = "".join(list(wind_td_day.stripped_strings)[:2]) if wind_td_day.stripped_strings else "--"
-                        wind_night = "".join(list(wind_td_day_night.stripped_strings)[:2]) if wind_td_day_night.stripped_strings else "--"
-
-                        # 如果没有白天的数据就使用夜间的
-                        temp = f"{low_temp}——{high_temp}℃" if high_temp != "-" else f"{low_temp}℃"
-                        weather_typ = weather_typ_day if weather_typ_day != "-" else weather_type_night
-                        wind = wind_day if wind_day != "--" else wind_night
+                text = resp.text
+                soup = BeautifulSoup(text, 'html.parser')  # 使用更快的解析器
+                
+                # 添加调试输出
+                # print(f"响应内容: {text[:500]}...")  # 打印前500个字符
+                
+                div_conMidtab = soup.find("div", class_="conMidtab")
+                
+                if not div_conMidtab:
+                    print(f"在 {url} 中未找到 conMidtab 元素")
+                    continue
+                    
+                tables = div_conMidtab.find_all("table")
+                if not tables:
+                    print(f"在 {url} 中未找到表格")
+                    continue
+                    
+                for table in tables:
+                    trs = table.find_all("tr")[2:]
+                    for index, tr in enumerate(trs):
+                        tds = tr.find_all("td")
+                        if len(tds) < 8:  # 确保有足够的列
+                            continue
+                            
+                        city_td = tds[-8]
+                        this_city = list(city_td.stripped_strings)[0] if city_td.stripped_strings else ""
                         
-                        return this_city, temp, weather_typ, wind
+                        if this_city == my_city:
+                            # 解析天气数据
+                            high_temp_td = tds[-5]
+                            low_temp_td = tds[-2]
+                            weather_type_day_td = tds[-7]
+                            weather_type_night_td = tds[-4]
+                            wind_td_day = tds[-6]
+                            wind_td_day_night = tds[-3]
+
+                            high_temp = list(high_temp_td.stripped_strings)[0] if high_temp_td.stripped_strings else "-"
+                            low_temp = list(low_temp_td.stripped_strings)[0] if low_temp_td.stripped_strings else "-"
+                            weather_typ_day = list(weather_type_day_td.stripped_strings)[0] if weather_type_day_td.stripped_strings else "-"
+                            weather_type_night = list(weather_type_night_td.stripped_strings)[0] if weather_type_night_td.stripped_strings else "-"
+
+                            wind_day = "".join(list(wind_td_day.stripped_strings)[:2]) if wind_td_day.stripped_strings else "--"
+                            wind_night = "".join(list(wind_td_day_night.stripped_strings)[:2]) if wind_td_day_night.stripped_strings else "--"
+
+                            # 如果没有白天的数据就使用夜间的
+                            temp = f"{low_temp}——{high_temp}℃" if high_temp != "-" else f"{low_temp}℃"
+                            weather_typ = weather_typ_day if weather_typ_day != "-" else weather_type_night
+                            wind = wind_day if wind_day != "--" else wind_night
+                            
+                            return this_city, temp, weather_typ, wind
+                
+                # 请求之间添加随机延迟，避免被识别为爬虫
+                time.sleep(random.uniform(1, 3))
                         
+            except Exception as e:
+                print(f"处理 {url} 时出错: {e}")
+                continue
+        
         print(f"未找到城市 {my_city} 的天气信息")
         return None
         
@@ -89,7 +150,8 @@ def get_weather(my_city):
 def get_access_token():
     try:
         url = f'https://api.weixin.qq.com/cgi-bin/token?grant_type=client_credential&appid={appID.strip()}&secret={appSecret.strip()}'
-        response = requests.get(url, timeout=10)
+        session = create_session()
+        response = session.get(url, timeout=15)
         response.raise_for_status()
         data = response.json()
         
@@ -107,7 +169,8 @@ def get_access_token():
 def get_daily_love():
     try:
         url = "https://api.lovelive.tools/api/SweetNothings/Serialization/Json"
-        r = requests.get(url, timeout=10)
+        session = create_session()
+        r = session.get(url, timeout=15)
         r.raise_for_status()
         data = r.json()
         return data.get('returnObj', [""])[0]
@@ -146,11 +209,12 @@ def send_weather(access_token, weather):
             }
             
             url = f'https://api.weixin.qq.com/cgi-bin/message/template/send?access_token={access_token}'
-            response = requests.post(
+            session = create_session()
+            response = session.post(
                 url, 
                 json.dumps(body, ensure_ascii=False).encode('utf-8'),
                 headers={'Content-Type': 'application/json'},
-                timeout=10
+                timeout=15
             ).json()
             
             print(f"发送给 {openId} 的结果: {response}")
@@ -185,11 +249,12 @@ def send_timetable(access_token, message):
             }
             
             url = f'https://api.weixin.qq.com/cgi-bin/message/template/send?access_token={access_token}'
-            response = requests.post(
+            session = create_session()
+            response = session.post(
                 url, 
                 json.dumps(body, ensure_ascii=False).encode('utf-8'),
                 headers={'Content-Type': 'application/json'},
-                timeout=10
+                timeout=15
             ).json()
             
             print(f"发送时间表给 {openId} 的结果: {response}")
