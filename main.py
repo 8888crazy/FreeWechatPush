@@ -126,7 +126,11 @@ def get_weather(my_city):
                             wind_night = "".join(list(wind_td_day_night.stripped_strings)[:2]) if wind_td_day_night.stripped_strings else "--"
 
                             # 如果没有白天的数据就使用夜间的
-                            temp = f"{low_temp}——{high_temp}℃" if high_temp != "-" else f"{low_temp}℃"
+                            # temp = f"{low_temp}——{high_temp}℃" if high_temp != "-" else f"{low_temp}℃"
+                            if high_temp != "-":
+                                temp = f"{low_temp}——{high_temp}摄氏度"
+                            else:
+                                temp = f"{low_temp}摄氏度"
                             weather_typ = weather_typ_day if weather_typ_day != "-" else weather_type_night
                             wind = wind_day if wind_day != "--" else wind_night
                             
