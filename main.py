@@ -12,7 +12,7 @@ city = os.getenv("CITY")  # 添加城市环境变量
 
 # 从环境变量获取逗号分隔的OpenID列表
 openIds_str = os.getenv("OPEN_IDS")
-openIds = [oid.strip() for oid in openIds_str.split(",")]
+openIds = [oid.strip() for oid in openIds_str.split(",")] if openIds_str else []
 
 # 天气预报模板ID
 weather_template_id = "OqxHyfroYI9lryCQwR-MHukMcy9r7qhKScmw2NPfzyI"
@@ -55,7 +55,27 @@ def get_weather(my_city):
                     this_city = list(city_td.stripped_strings)[0]
                     
                     if this_city == my_city:
-                        # ... 现有解析逻辑 ...
+                        # 解析天气数据
+                        high_temp_td = tds[-5]
+                        low_temp_td = tds[-2]
+                        weather_type_day_td = tds[-7]
+                        weather_type_night_td = tds[-4]
+                        wind_td_day = tds[-6]
+                        wind_td_day_night = tds[-3]
+
+                        high_temp = list(high_temp_td.stripped_strings)[0] if high_temp_td.stripped_strings else "-"
+                        low_temp = list(low_temp_td.stripped_strings)[0] if low_temp_td.stripped_strings else "-"
+                        weather_typ_day = list(weather_type_day_td.stripped_strings)[0] if weather_type_day_td.stripped_strings else "-"
+                        weather_type_night = list(weather_type_night_td.stripped_strings)[0] if weather_type_night_td.stripped_strings else "-"
+
+                        wind_day = "".join(list(wind_td_day.stripped_strings)[:2]) if wind_td_day.stripped_strings else "--"
+                        wind_night = "".join(list(wind_td_day_night.stripped_strings)[:2]) if wind_td_day_night.stripped_strings else "--"
+
+                        # 如果没有白天的数据就使用夜间的
+                        temp = f"{low_temp}——{high_temp}℃" if high_temp != "-" else f"{low_temp}℃"
+                        weather_typ = weather_typ_day if weather_typ_day != "-" else weather_type_night
+                        wind = wind_day if wind_day != "--" else wind_night
+                        
                         return this_city, temp, weather_typ, wind
                         
         print(f"未找到城市 {my_city} 的天气信息")
@@ -99,6 +119,10 @@ def get_daily_love():
 def send_weather(access_token, weather):
     if not weather:
         print("天气信息无效，取消发送")
+        return
+    
+    if not openIds:
+        print("没有设置接收用户，取消发送")
         return
         
     for i, openId in enumerate(openIds):
@@ -146,6 +170,10 @@ def send_timetable(access_token, message):
     if not timetable_template_id or timetable_template_id.strip() == "":
         print("时间表模板ID未设置，取消发送")
         return
+    
+    if not openIds:
+        print("没有设置接收用户，取消发送")
+        return
         
     for i, openId in enumerate(openIds):
         try:
@@ -178,6 +206,10 @@ def send_timetable(access_token, message):
 
 
 def weather_report(city):
+    if not city:
+        print("未设置城市，取消天气报告")
+        return
+    
     access_token = get_access_token()
     if not access_token:
         print("获取access_token失败，无法发送天气报告")
