@@ -3,7 +3,7 @@ name: Scheduled Python Script Execution
 on:
   schedule:
     # 每天 UTC 时间 00:00 执行（北京时间 08:00）
-    - cron: '0 22-23,0-10 * * *'
+    - cron: '0 22 * * *'
     
   # 可选：允许手动触发
   workflow_dispatch:
